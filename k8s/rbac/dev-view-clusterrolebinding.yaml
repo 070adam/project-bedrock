@@ -1,0 +1,29 @@
+---
+# ClusterRoleBinding — binds the built-in "view" ClusterRole to bedrock-dev-view.
+# The "view" ClusterRole grants read-only access to most namespace-scoped
+# resources (pods, deployments, services, configmaps, etc.) across the cluster.
+# It does NOT allow delete, create, or update operations.
+#
+# Combined with the EKS Access Entry (Terraform aws_eks_access_entry resource),
+# this satisfies the two-layer access requirement:
+#   1. AWS Console: ReadOnlyAccess IAM policy (managed in Terraform IAM module)
+#   2. K8s RBAC:   view ClusterRole via this binding
+#
+# Verification commands (as bedrock-dev-view):
+#   ✅ kubectl get pods -n retail-app           → should succeed
+#   ❌ kubectl delete pod <name> -n retail-app  → should be forbidden
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: bedrock-dev-view-binding
+  labels:
+    project: karatu-2025-capstone
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: view
+subjects:
+  - kind: User
+    name: bedrock-dev-view   # Must match the IAM user name mapped via EKS Access Entry
+    apiGroup: rbac.authorization.k8s.io

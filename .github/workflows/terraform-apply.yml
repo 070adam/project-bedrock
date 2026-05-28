@@ -1,0 +1,85 @@
+name: "Terraform Apply (Main)"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "terraform/**"
+      - ".github/workflows/terraform-apply.yml"
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  TF_VERSION: "1.9.5"
+  AWS_REGION: "us-east-1"
+  WORKING_DIR: "./terraform"
+
+jobs:
+  terraform-apply:
+    name: "Terraform Apply"
+    runs-on: ubuntu-latest
+    environment: production   # Requires manual approval in GitHub Environments settings
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIR }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init -input=false
+
+      - name: Terraform Validate
+        run: terraform validate -no-color
+
+      # Two-pass apply: infrastructure first, then platform resources
+      - name: Terraform Apply — Pass 1 (Core Infrastructure)
+        run: |
+          terraform apply \
+            -var="student_id=${{ secrets.STUDENT_ID }}" \
+            -target=module.vpc \
+            -target=module.eks \
+            -target=module.rds \
+            -target=module.dynamodb \
+            -target=module.iam \
+            -target=module.serverless \
+            -auto-approve \
+            -input=false
+        env:
+          TF_LOG: WARN
+
+      - name: Terraform Apply — Pass 2 (Platform & App)
+        run: |
+          terraform apply \
+            -var="student_id=${{ secrets.STUDENT_ID }}" \
+            -auto-approve \
+            -input=false
+        env:
+          TF_LOG: WARN
+
+      - name: Capture Outputs
+        run: |
+          echo "### 🚀 Terraform Apply Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Output | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Cluster Name | $(terraform output -raw cluster_name) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Cluster Endpoint | $(terraform output -raw cluster_endpoint) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Region | $(terraform output -raw region) |" >> $GITHUB_STEP_SUMMARY
+          echo "| VPC ID | $(terraform output -raw vpc_id) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Assets Bucket | $(terraform output -raw assets_bucket_name) |" >> $GITHUB_STEP_SUMMARY
+          echo "| kubectl config | \`aws eks update-kubeconfig --region us-east-1 --name project-bedrock-cluster\` |" >> $GITHUB_STEP_SUMMARY
