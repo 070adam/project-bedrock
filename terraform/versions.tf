@@ -39,9 +39,6 @@ provider "aws" {
   }
 }
 
-# Kubernetes provider — configured after cluster creation.
-# On first apply, run: terraform apply -target=module.eks
-# Then run: terraform apply (to deploy Helm releases and K8s resources)
 provider "kubernetes" {
   host                   = module.eks.cluster_endpoint
   cluster_ca_certificate = base64decode(module.eks.cluster_ca_data)

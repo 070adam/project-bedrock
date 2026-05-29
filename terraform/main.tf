@@ -1,10 +1,7 @@
-########################################################################
-# Project Bedrock — Root Module
+# Project Bedrock 
 # Provisions: VPC → EKS → RDS → DynamoDB → IAM → Serverless
-# Platform resources (Helm, K8s) are applied in a second pass after EKS.
-########################################################################
 
-# ── VPC ──────────────────────────────────────────────────────────────
+# ── VPC 
 module "vpc" {
   source = "./modules/vpc"
 
@@ -17,7 +14,7 @@ module "vpc" {
   common_tags          = var.common_tags
 }
 
-# ── EKS ──────────────────────────────────────────────────────────────
+# ── EKS 
 module "eks" {
   source = "./modules/eks"
 
@@ -32,7 +29,7 @@ module "eks" {
   common_tags         = var.common_tags
 }
 
-# ── RDS (MySQL + PostgreSQL) ──────────────────────────────────────────
+# ── RDS (MySQL + PostgreSQL) 
 module "rds" {
   source = "./modules/rds"
 
@@ -47,7 +44,7 @@ module "rds" {
   common_tags             = var.common_tags
 }
 
-# ── DynamoDB ──────────────────────────────────────────────────────────
+# ── DynamoDB 
 module "dynamodb" {
   source = "./modules/dynamodb"
 
@@ -55,7 +52,7 @@ module "dynamodb" {
   common_tags     = var.common_tags
 }
 
-# ── IAM (developer user + IRSA roles) ────────────────────────────────
+# ── IAM (developer user + IRSA roles) 
 module "iam" {
   source = "./modules/iam"
 
@@ -66,7 +63,7 @@ module "iam" {
   common_tags              = var.common_tags
 }
 
-# ── Serverless (S3 + Lambda) ──────────────────────────────────────────
+# ── Serverless (S3 + Lambda) 
 module "serverless" {
   source = "./modules/serverless"
 
@@ -76,9 +73,7 @@ module "serverless" {
   common_tags            = var.common_tags
 }
 
-# ── EKS Developer Access Entry ────────────────────────────────────────
-# Map bedrock-dev-view IAM user → Kubernetes view ClusterRole via Access Entries
-# (modern replacement for aws-auth ConfigMap, available EKS ≥ 1.29)
+# ── EKS Developer Access Entry 
 resource "aws_eks_access_entry" "dev_view" {
   cluster_name  = module.eks.cluster_name
   principal_arn = module.iam.dev_user_arn
@@ -101,8 +96,7 @@ resource "aws_eks_access_policy_association" "dev_view_policy" {
   depends_on = [aws_eks_access_entry.dev_view]
 }
 
-# ── AWS Load Balancer Controller (Helm) ───────────────────────────────
-# Requires the cluster to exist. Run after: terraform apply -target=module.eks
+# ── AWS Load Balancer Controller (Helm) 
 resource "helm_release" "aws_load_balancer_controller" {
   name       = "aws-load-balancer-controller"
   repository = "https://aws.github.io/eks-charts"
@@ -114,27 +108,22 @@ resource "helm_release" "aws_load_balancer_controller" {
     name  = "clusterName"
     value = module.eks.cluster_name
   }
-
   set {
     name  = "serviceAccount.create"
     value = "true"
   }
-
   set {
     name  = "serviceAccount.name"
     value = "aws-load-balancer-controller"
   }
-
   set {
     name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
     value = module.iam.alb_controller_role_arn
   }
-
   set {
     name  = "region"
     value = var.region
   }
-
   set {
     name  = "vpcId"
     value = module.vpc.vpc_id
@@ -142,22 +131,19 @@ resource "helm_release" "aws_load_balancer_controller" {
 
   depends_on = [module.eks, module.iam]
 }
-
-# ── Kubernetes Namespace ──────────────────────────────────────────────
+# ── Kubernetes Namespace 
 resource "kubernetes_namespace" "retail_app" {
   metadata {
     name = var.app_namespace
-
     labels = {
       name    = var.app_namespace
       project = "karatu-2025-capstone"
     }
   }
-
   depends_on = [module.eks]
 }
 
-# ── Kubernetes Secrets (DB credentials from Secrets Manager) ─────────
+# ── Kubernetes Secrets (DB credentials from Secrets Manager) 
 data "aws_secretsmanager_secret_version" "mysql" {
   secret_id  = module.rds.mysql_secret_arn
   depends_on = [module.rds]
@@ -178,14 +164,12 @@ resource "kubernetes_secret" "catalog_db" {
     name      = "catalog-db-credentials"
     namespace = kubernetes_namespace.retail_app.metadata[0].name
   }
-
   data = {
     DB_ENDPOINT = module.rds.mysql_endpoint
     DB_NAME     = var.mysql_db_name
     DB_USER     = var.mysql_username
     DB_PASSWORD = local.mysql_creds.password
   }
-
   type = "Opaque"
 }
 
@@ -194,14 +178,12 @@ resource "kubernetes_secret" "orders_db" {
     name      = "orders-db-credentials"
     namespace = kubernetes_namespace.retail_app.metadata[0].name
   }
-
   data = {
     DB_ENDPOINT = module.rds.postgres_endpoint
     DB_NAME     = var.postgres_db_name
     DB_USER     = var.postgres_username
     DB_PASSWORD = local.postgres_creds.password
   }
-
   type = "Opaque"
 }
 
@@ -210,24 +192,21 @@ resource "kubernetes_secret" "dynamodb_config" {
     name      = "dynamodb-config"
     namespace = kubernetes_namespace.retail_app.metadata[0].name
   }
-
   data = {
     CART_TABLE_NAME = var.dynamodb_cart_table
     AWS_REGION      = var.region
   }
-
   type = "Opaque"
 }
 
-# ── Retail Store App (Helm with managed-DB overrides) ─────────────────
+# ── Retail Store App (Helm with managed-DB overrides)
 resource "helm_release" "retail_store" {
   name             = "retail-store"
-  repository       = "oci://public.ecr.aws/aws-containers"
+  repository       = "https://aws-containers.github.io/retail-store-sample-app"
   chart            = "retail-store-sample-app"
+  version          = "0.8.0"
   namespace        = kubernetes_namespace.retail_app.metadata[0].name
   create_namespace = false
-
-  # ── Catalog service → MySQL RDS ──────────────────────────────────
   set {
     name  = "catalog.db.endpoint"
     value = module.rds.mysql_endpoint
@@ -248,8 +227,6 @@ resource "helm_release" "retail_store" {
     name  = "catalog.db.managed"
     value = "true"
   }
-
-  # ── Orders service → PostgreSQL RDS ──────────────────────────────
   set {
     name  = "orders.db.endpoint"
     value = module.rds.postgres_endpoint
@@ -270,8 +247,6 @@ resource "helm_release" "retail_store" {
     name  = "orders.db.managed"
     value = "true"
   }
-
-  # ── Cart service → DynamoDB ───────────────────────────────────────
   set {
     name  = "cart.dynamodb.tableName"
     value = var.dynamodb_cart_table
@@ -284,8 +259,6 @@ resource "helm_release" "retail_store" {
     name  = "cart.dynamodb.managed"
     value = "true"
   }
-
-  # ── In-cluster: RabbitMQ + Redis (acceptable per spec) ───────────
   set {
     name  = "rabbitmq.enabled"
     value = "true"
@@ -303,31 +276,31 @@ resource "helm_release" "retail_store" {
   ]
 }
 
-# ── ALB Ingress for UI service ────────────────────────────────────────
-resource "kubernetes_ingress_v1" "retail_ui" {
+# ── ALB Ingress for UI service 
+ resource "kubernetes_ingress_v1" "retail_ui" {
   metadata {
     name      = "retail-ui-ingress"
     namespace = kubernetes_namespace.retail_app.metadata[0].name
-
+    labels = {
+      project = "karatu-2025-capstone"
+      app     = "retail-store-ui"
+    }
     annotations = {
-      "kubernetes.io/ingress.class"                        = "alb"
-      "alb.ingress.kubernetes.io/scheme"                   = "internet-facing"
-      "alb.ingress.kubernetes.io/target-type"              = "ip"
-      "alb.ingress.kubernetes.io/healthcheck-path"         = "/actuator/health"
-      "alb.ingress.kubernetes.io/listen-ports"             = "[{\"HTTP\": 80}]"
-      "alb.ingress.kubernetes.io/tags"                     = "Project=karatu-2025-capstone"
+      "kubernetes.io/ingress.class"                = "alb"
+      "alb.ingress.kubernetes.io/scheme"           = "internet-facing"
+      "alb.ingress.kubernetes.io/target-type"      = "ip"
+      "alb.ingress.kubernetes.io/healthcheck-path" = "/actuator/health"
+      "alb.ingress.kubernetes.io/listen-ports"     = "[{\"HTTP\": 80}]"
+      "alb.ingress.kubernetes.io/tags"             = "Project=karatu-2025-capstone"
     }
   }
-
   spec {
     ingress_class_name = "alb"
-
     rule {
       http {
         path {
           path      = "/"
           path_type = "Prefix"
-
           backend {
             service {
               name = "ui"
@@ -340,6 +313,5 @@ resource "kubernetes_ingress_v1" "retail_ui" {
       }
     }
   }
-
   depends_on = [helm_release.retail_store, helm_release.aws_load_balancer_controller]
 }

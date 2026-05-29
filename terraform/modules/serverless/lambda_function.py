@@ -1,7 +1,5 @@
 """
 bedrock-asset-processor
-Triggered by S3 ObjectCreated events on bedrock-assets-<student-id>.
-Logs each uploaded file name to CloudWatch Logs.
 """
 
 import json

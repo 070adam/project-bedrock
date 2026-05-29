@@ -1,7 +1,4 @@
-########################################################################
 # DynamoDB Module
-# Creates: Cart table with on-demand capacity, TTL, and point-in-time recovery
-########################################################################
 
 resource "aws_dynamodb_table" "cart" {
   name         = var.cart_table_name
@@ -25,10 +22,6 @@ resource "aws_dynamodb_table" "cart" {
   }
 
   point_in_time_recovery {
-    enabled = true
-  }
-
-  server_side_encryption {
     enabled = true
   }
 

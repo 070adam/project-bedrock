@@ -1,16 +1,14 @@
-########################################################################
 # Serverless Module
-# Creates: S3 assets bucket, Lambda function, S3 event notification
-########################################################################
 
-# ── Lambda source package ─────────────────────────────────────────────
+
+# ── Lambda source package 
 data "archive_file" "lambda" {
   type        = "zip"
   source_file = "${path.module}/lambda_function.py"
   output_path = "${path.module}/lambda_function.zip"
 }
 
-# ── CloudWatch Log Group for Lambda ──────────────────────────────────
+# ── CloudWatch Log Group for Lambda 
 resource "aws_cloudwatch_log_group" "lambda" {
   name              = "/aws/lambda/bedrock-asset-processor"
   retention_in_days = 30
@@ -18,7 +16,7 @@ resource "aws_cloudwatch_log_group" "lambda" {
   tags = var.common_tags
 }
 
-# ── Lambda Function ───────────────────────────────────────────────────
+# ── Lambda Function 
 resource "aws_lambda_function" "asset_processor" {
   function_name = "bedrock-asset-processor"
   description   = "Logs uploaded asset filenames from the bedrock-assets S3 bucket"
@@ -42,13 +40,13 @@ resource "aws_lambda_function" "asset_processor" {
   depends_on = [aws_cloudwatch_log_group.lambda]
 }
 
-# ── S3 Assets Bucket ──────────────────────────────────────────────────
+# ── S3 Assets Bucket 
 resource "aws_s3_bucket" "assets" {
-  bucket        = "bedrock-assets-${var.student_id}"
+  bucket        = "bedrock-assets-alt-soe-025-3914"
   force_destroy = true
 
   tags = merge(var.common_tags, {
-    Name = "bedrock-assets-${var.student_id}"
+    Name = "bedrock-assets-alt-soe-025-3914"
   })
 }
 
@@ -87,7 +85,7 @@ resource "aws_s3_bucket_ownership_controls" "assets" {
   }
 }
 
-# ── Lambda Permission — allow S3 to invoke it ─────────────────────────
+# ── Lambda Permission — allow S3 to invoke it 
 resource "aws_lambda_permission" "allow_s3" {
   statement_id  = "AllowS3Invocation"
   action        = "lambda:InvokeFunction"
@@ -96,7 +94,7 @@ resource "aws_lambda_permission" "allow_s3" {
   source_arn    = aws_s3_bucket.assets.arn
 }
 
-# ── S3 Event Notification → Lambda ───────────────────────────────────
+# ── S3 Event Notification → Lambda 
 resource "aws_s3_bucket_notification" "asset_upload" {
   bucket = aws_s3_bucket.assets.id
 

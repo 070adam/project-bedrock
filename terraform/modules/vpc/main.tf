@@ -1,7 +1,4 @@
-########################################################################
 # VPC Module
-# Creates: VPC, public & private subnets (2 AZs), IGW, NAT GW, routes
-########################################################################
 
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
@@ -14,9 +11,9 @@ resource "aws_vpc" "main" {
   })
 }
 
-# ── Public Subnets ────────────────────────────────────────────────────
+# ── Public Subnets 
 resource "aws_subnet" "public" {
-  count = length(var.public_subnet_cidrs)
+  count = 2
 
   vpc_id                  = aws_vpc.main.id
   cidr_block              = var.public_subnet_cidrs[count.index]
@@ -30,9 +27,9 @@ resource "aws_subnet" "public" {
   })
 }
 
-# ── Private Subnets ───────────────────────────────────────────────────
+# ── Private Subnets
 resource "aws_subnet" "private" {
-  count = length(var.private_subnet_cidrs)
+  count = 2
 
   vpc_id            = aws_vpc.main.id
   cidr_block        = var.private_subnet_cidrs[count.index]
@@ -45,7 +42,7 @@ resource "aws_subnet" "private" {
   })
 }
 
-# ── Internet Gateway ──────────────────────────────────────────────────
+# ── Internet Gateway 
 resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
 
@@ -54,10 +51,10 @@ resource "aws_internet_gateway" "main" {
   })
 }
 
-# ── Elastic IPs for NAT Gateways ──────────────────────────────────────
+# ── Elastic IPs for NAT Gateways 
 # One NAT GW per AZ for high availability
 resource "aws_eip" "nat" {
-  count  = length(var.public_subnet_cidrs)
+  count  = 1
   domain = "vpc"
 
   tags = merge(var.common_tags, {
@@ -67,9 +64,9 @@ resource "aws_eip" "nat" {
   depends_on = [aws_internet_gateway.main]
 }
 
-# ── NAT Gateways ──────────────────────────────────────────────────────
+# ── NAT Gateways 
 resource "aws_nat_gateway" "main" {
-  count = length(var.public_subnet_cidrs)
+  count = 1
 
   allocation_id = aws_eip.nat[count.index].id
   subnet_id     = aws_subnet.public[count.index].id
@@ -81,7 +78,7 @@ resource "aws_nat_gateway" "main" {
   depends_on = [aws_internet_gateway.main]
 }
 
-# ── Public Route Table ────────────────────────────────────────────────
+# ── Public Route Table
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
 
@@ -102,14 +99,14 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
-# ── Private Route Tables (one per AZ → own NAT GW) ───────────────────
+# ── Private Route Tables (one per AZ → own NAT GW) 
 resource "aws_route_table" "private" {
   count  = length(var.private_subnet_cidrs)
   vpc_id = aws_vpc.main.id
 
   route {
     cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.main[count.index].id
+    nat_gateway_id = aws_nat_gateway.main[0].id
   }
 
   tags = merge(var.common_tags, {
@@ -124,7 +121,7 @@ resource "aws_route_table_association" "private" {
   route_table_id = aws_route_table.private[count.index].id
 }
 
-# ── VPC Flow Logs (security best practice) ───────────────────────────
+# ── VPC Flow Logs (security best practice) 
 resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
   name              = "/aws/vpc/${var.vpc_name}/flow-logs"
   retention_in_days = 30

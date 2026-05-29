@@ -1,8 +1,4 @@
-########################################################################
 # RDS Module
-# Creates: DB subnet groups, security groups, MySQL + PostgreSQL RDS,
-#          Secrets Manager secrets for credentials
-########################################################################
 
 resource "random_password" "mysql" {
   length           = 24
@@ -16,7 +12,7 @@ resource "random_password" "postgres" {
   override_special = "!#$%&*()-_=+[]{}<>:?"
 }
 
-# ── Secrets Manager ───────────────────────────────────────────────────
+# ── Secrets Manager 
 resource "aws_secretsmanager_secret" "mysql" {
   name                    = "project-bedrock/rds/mysql"
   description             = "MySQL RDS credentials for Project Bedrock catalog service"
@@ -57,7 +53,7 @@ resource "aws_secretsmanager_secret_version" "postgres" {
   })
 }
 
-# ── Security Groups ───────────────────────────────────────────────────
+# ── Security Groups 
 resource "aws_security_group" "mysql" {
   name        = "project-bedrock-mysql-sg"
   description = "Allow MySQL traffic from EKS nodes only"
@@ -110,7 +106,7 @@ resource "aws_security_group" "postgres" {
   })
 }
 
-# ── DB Subnet Group (private subnets only) ────────────────────────────
+# ── DB Subnet Group (private subnets only)
 resource "aws_db_subnet_group" "main" {
   name        = "project-bedrock-db-subnet-group"
   description = "Private subnets for Project Bedrock RDS instances"
@@ -121,7 +117,7 @@ resource "aws_db_subnet_group" "main" {
   })
 }
 
-# ── MySQL RDS Instance ────────────────────────────────────────────────
+# ── MySQL RDS Instance 
 resource "aws_db_instance" "mysql" {
   identifier        = "project-bedrock-mysql"
   engine            = "mysql"
@@ -144,7 +140,7 @@ resource "aws_db_instance" "mysql" {
   final_snapshot_identifier = "project-bedrock-mysql-final-snapshot"
   deletion_protection    = false   # set true for production
 
-  backup_retention_period = 7
+  backup_retention_period = 0
   backup_window           = "02:00-03:00"
   maintenance_window      = "sun:04:00-sun:05:00"
 
@@ -172,7 +168,7 @@ resource "aws_db_parameter_group" "mysql" {
   tags = var.common_tags
 }
 
-# ── PostgreSQL RDS Instance ───────────────────────────────────────────
+# ── PostgreSQL RDS Instance 
 resource "aws_db_instance" "postgres" {
   identifier        = "project-bedrock-postgres"
   engine            = "postgres"
@@ -195,7 +191,7 @@ resource "aws_db_instance" "postgres" {
   final_snapshot_identifier = "project-bedrock-postgres-final-snapshot"
   deletion_protection    = false
 
-  backup_retention_period = 7
+  backup_retention_period = 0
   backup_window           = "02:00-03:00"
   maintenance_window      = "sun:04:00-sun:05:00"
 

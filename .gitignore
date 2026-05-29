@@ -1,0 +1,34 @@
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.backup
+*.tfvars
+!*.tfvars.example
+tfplan
+*.zip
+crash.log
+
+# Secrets
+*.pem
+*.key
+.env
+
+# Temp files
+gsi.json
+dynamo-policy.json
+test-image.jpg
+carts-logs.txt
+orders-logs.txt
+override-values.yaml
+
+# Cloned repos
+retail-store-sample-app/
+terraform/retail-store-sample-app/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+.DS_Store
+"@ | Out-File -FilePath ".gitignore" -Encoding utf8

@@ -1,5 +1,3 @@
-# ── Required outputs (checked by automated grader) ───────────────────
-
 output "cluster_endpoint" {
   description = "EKS API server endpoint"
   value       = module.eks.cluster_endpoint
@@ -21,27 +19,23 @@ output "vpc_id" {
 }
 
 output "assets_bucket_name" {
-  description = "S3 assets bucket name (bedrock-assets-<student_id>)"
+  description = "S3 assets bucket name"
   value       = module.serverless.assets_bucket_name
 }
 
-# ── Additional useful outputs ─────────────────────────────────────────
-
 output "alb_hostname" {
-  description = "DNS name of the Application Load Balancer (may take ~2 min to resolve)"
+  description = "DNS name of the Application Load Balancer"
   value       = try(kubernetes_ingress_v1.retail_ui.status[0].load_balancer[0].ingress[0].hostname, "pending — check: kubectl get ingress -n retail-app")
 }
 
 output "mysql_endpoint" {
-  description = "MySQL RDS endpoint (private)"
+  description = "MySQL RDS endpoint"
   value       = module.rds.mysql_endpoint
-  sensitive   = false
 }
 
 output "postgres_endpoint" {
-  description = "PostgreSQL RDS endpoint (private)"
+  description = "PostgreSQL RDS endpoint"
   value       = module.rds.postgres_endpoint
-  sensitive   = false
 }
 
 output "dev_user_name" {
@@ -50,18 +44,18 @@ output "dev_user_name" {
 }
 
 output "dev_user_access_key_id" {
-  description = "Access key ID for bedrock-dev-view (store securely)"
+  description = "Access key ID for bedrock-dev-view"
   value       = module.iam.dev_user_access_key_id
   sensitive   = true
 }
 
 output "dev_user_secret_access_key" {
-  description = "Secret access key for bedrock-dev-view (store securely)"
+  description = "Secret access key for bedrock-dev-view"
   value       = module.iam.dev_user_secret_access_key
   sensitive   = true
 }
 
 output "configure_kubectl" {
-  description = "Command to configure kubectl for this cluster"
+  description = "Command to configure kubectl"
   value       = "aws eks update-kubeconfig --region ${var.region} --name ${module.eks.cluster_name}"
 }

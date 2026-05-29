@@ -1,8 +1,4 @@
-########################################################################
 # IAM Module
-# Creates: bedrock-dev-view user, IRSA role for ALB controller,
-#          IRSA role for cart service (DynamoDB access), Lambda exec role
-########################################################################
 
 data "aws_caller_identity" "current" {}
 data "aws_partition" "current" {}
@@ -11,7 +7,7 @@ locals {
   oidc_provider_id = replace(var.cluster_oidc_issuer_url, "https://", "")
 }
 
-# ── bedrock-dev-view IAM User ─────────────────────────────────────────
+# ── bedrock-dev-view IAM User 
 resource "aws_iam_user" "dev_view" {
   name = "bedrock-dev-view"
   path = "/"
@@ -54,7 +50,7 @@ resource "aws_iam_access_key" "dev_view" {
   user = aws_iam_user.dev_view.name
 }
 
-# ── IRSA: AWS Load Balancer Controller ───────────────────────────────
+# ── IRSA: AWS Load Balancer Controller 
 data "aws_iam_policy_document" "alb_controller_assume" {
   statement {
     actions = ["sts:AssumeRoleWithWebIdentity"]
@@ -102,7 +98,7 @@ resource "aws_iam_role_policy_attachment" "alb_controller" {
   policy_arn = aws_iam_policy.alb_controller.arn
 }
 
-# ── IRSA: Cart Service (DynamoDB) ─────────────────────────────────────
+# ── IRSA: Cart Service (DynamoDB) 
 data "aws_iam_policy_document" "cart_assume" {
   statement {
     actions = ["sts:AssumeRoleWithWebIdentity"]
@@ -158,7 +154,7 @@ resource "aws_iam_role_policy" "cart_dynamodb" {
   })
 }
 
-# ── Lambda Execution Role ─────────────────────────────────────────────
+# ── Lambda Execution Role 
 resource "aws_iam_role" "lambda_exec" {
   name = "bedrock-asset-processor-role"
 

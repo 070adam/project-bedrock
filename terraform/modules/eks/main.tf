@@ -1,13 +1,9 @@
-########################################################################
 # EKS Module
-# Creates: IAM roles, EKS cluster, managed node group, OIDC provider,
-#          CloudWatch Observability add-on, control plane logging
-########################################################################
 
 data "aws_caller_identity" "current" {}
 data "aws_partition" "current" {}
 
-# ── Cluster IAM Role ──────────────────────────────────────────────────
+# Cluster IAM Role 
 resource "aws_iam_role" "cluster" {
   name = "${var.cluster_name}-cluster-role"
 
@@ -33,7 +29,7 @@ resource "aws_iam_role_policy_attachment" "cluster_vpc_resource" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController"
 }
 
-# ── Node Group IAM Role ───────────────────────────────────────────────
+# Node Group IAM Role 
 resource "aws_iam_role" "nodes" {
   name = "${var.cluster_name}-node-role"
 
@@ -70,7 +66,7 @@ resource "aws_iam_role_policy_attachment" "nodes_cloudwatch" {
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
 }
 
-# ── Cluster Security Group ────────────────────────────────────────────
+# Cluster Security Group 
 resource "aws_security_group" "cluster" {
   name        = "${var.cluster_name}-cluster-sg"
   description = "EKS cluster control plane security group"
@@ -89,7 +85,7 @@ resource "aws_security_group" "cluster" {
   })
 }
 
-# ── Node Security Group ───────────────────────────────────────────────
+# Node Security Group 
 resource "aws_security_group" "nodes" {
   name        = "${var.cluster_name}-node-sg"
   description = "EKS worker node security group"
@@ -143,7 +139,7 @@ resource "aws_security_group_rule" "cluster_ingress_nodes" {
   description              = "Allow nodes to reach cluster API"
 }
 
-# ── CloudWatch Log Group for control plane logs ───────────────────────
+# CloudWatch Log Group for control plane logs 
 resource "aws_cloudwatch_log_group" "eks" {
   name              = "/aws/eks/${var.cluster_name}/cluster"
   retention_in_days = 30
@@ -151,7 +147,7 @@ resource "aws_cloudwatch_log_group" "eks" {
   tags = var.common_tags
 }
 
-# ── EKS Cluster ───────────────────────────────────────────────────────
+# EKS Cluster
 resource "aws_eks_cluster" "main" {
   name     = var.cluster_name
   version  = var.cluster_version
@@ -187,7 +183,7 @@ resource "aws_eks_cluster" "main" {
   ]
 }
 
-# ── Managed Node Group ────────────────────────────────────────────────
+# Managed Node Group 
 resource "aws_eks_node_group" "main" {
   cluster_name    = aws_eks_cluster.main.name
   node_group_name = "${var.cluster_name}-nodes"
@@ -208,7 +204,7 @@ resource "aws_eks_node_group" "main" {
 
   launch_template {
     name    = aws_launch_template.nodes.name
-    version = aws_launch_template.nodes.latest_version_number
+    version = aws_launch_template.nodes.default_version
   }
 
   tags = var.common_tags
@@ -223,7 +219,6 @@ resource "aws_eks_node_group" "main" {
 
 resource "aws_launch_template" "nodes" {
   name_prefix   = "${var.cluster_name}-node-lt-"
-  instance_type = var.node_instance_type
 
   vpc_security_group_ids = [aws_security_group.nodes.id]
 
@@ -243,7 +238,7 @@ resource "aws_launch_template" "nodes" {
   tags = var.common_tags
 }
 
-# ── OIDC Provider (for IRSA) ──────────────────────────────────────────
+# OIDC Provider (for IRSA)
 data "tls_certificate" "eks" {
   url = aws_eks_cluster.main.identity[0].oidc[0].issuer
 }
@@ -256,12 +251,16 @@ resource "aws_iam_openid_connect_provider" "eks" {
   tags = var.common_tags
 }
 
-# ── Core EKS Add-ons ──────────────────────────────────────────────────
+# Core EKS Add-ons
 resource "aws_eks_addon" "coredns" {
   cluster_name                = aws_eks_cluster.main.name
   addon_name                  = "coredns"
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
+
+configuration_values = jsonencode({
+    replicaCount = 1
+  })
 
   tags       = var.common_tags
   depends_on = [aws_eks_node_group.main]
@@ -297,8 +296,7 @@ resource "aws_eks_addon" "eks_pod_identity" {
   depends_on = [aws_eks_node_group.main]
 }
 
-# ── Amazon CloudWatch Observability Add-on ────────────────────────────
-# Ships container logs + metrics to CloudWatch (satisfies 4.4 requirement)
+# Amazon CloudWatch Observability Add-on 
 resource "aws_eks_addon" "cloudwatch_observability" {
   cluster_name                = aws_eks_cluster.main.name
   addon_name                  = "amazon-cloudwatch-observability"
