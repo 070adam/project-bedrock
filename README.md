@@ -91,6 +91,15 @@ terraform apply \
 # Pass 2 — platform + app (Helm releases, Ingress, K8s resources)
 terraform apply -var="student_id=$STUDENT_ID"
 ```
+## Live Deployment
+
+| Resource | Value |
+|---|---|
+| App URL | `http://k8s-retailap-retailui-dd768ff5c0-1954667491.us-east-1.elb.amazonaws.com` |
+| Cluster Endpoint | `https://4F56AE7200CCE6DDD7FBD6E2F6F11883.gr7.us-east-1.eks.amazonaws.com` |
+| VPC ID | `vpc-01ca906486bdbee36` |
+| Region | `us-east-1` |
+| Assets Bucket | `bedrock-assets-alt-soe-025-3914` |
 
 ### 5. Configure kubectl
 
