@@ -131,6 +131,7 @@ resource "helm_release" "aws_load_balancer_controller" {
 
   depends_on = [module.eks, module.iam]
 }
+
 # ── Kubernetes Namespace 
 resource "kubernetes_namespace" "retail_app" {
   metadata {
@@ -207,6 +208,7 @@ resource "helm_release" "retail_store" {
   version          = "0.8.0"
   namespace        = kubernetes_namespace.retail_app.metadata[0].name
   create_namespace = false
+  
   set {
     name  = "catalog.db.endpoint"
     value = module.rds.mysql_endpoint
