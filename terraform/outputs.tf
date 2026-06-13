@@ -23,10 +23,10 @@ output "assets_bucket_name" {
   value       = module.serverless.assets_bucket_name
 }
 
-output "alb_hostname" {
-  description = "DNS name of the Application Load Balancer"
-  value       = try(kubernetes_ingress_v1.retail_ui.status[0].load_balancer[0].ingress[0].hostname, "pending — check: kubectl get ingress -n retail-app")
-}
+#output "alb_hostname" {
+#  description = "DNS name of the Application Load Balancer"
+#  value       = try(kubernetes_ingress_v1.retail_ui.status[0].load_balancer[0].ingress[0].hostname, "pending — check: kubectl get ingress -n retail-app")
+#}
 
 output "mysql_endpoint" {
   description = "MySQL RDS endpoint"
