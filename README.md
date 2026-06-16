@@ -54,14 +54,14 @@ Production-grade Kubernetes infrastructure on AWS EKS for InnovateMart's retail 
 ### 1. Bootstrap remote state
 
 ```bash
-export STUDENT_ID="your-student-id"
+export STUDENT_ID="student-id"
 chmod +x scripts/bootstrap-backend.sh
 ./scripts/bootstrap-backend.sh
 ```
 
 ### 2. Configure backend
 
-Edit `terraform/backend.tf` — replace `<YOUR-STUDENT-ID>` with your actual student ID.
+`terraform/backend.tf`
 
 ### 3. Set variables
 
