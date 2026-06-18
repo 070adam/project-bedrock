@@ -22,3 +22,5 @@ postgres_username = "ordersadmin"
 rds_instance_class = "db.t3.micro"
 
 dynamodb_cart_table = "retail-store-cart"
+
+# CI/CD pipeline test
